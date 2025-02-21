@@ -1,0 +1,45 @@
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: PackageMetadata
+metadata:
+  creationTimestamp: null
+  name: multinic-operator.fling.vsphere.vmware.com
+spec:
+  categories:
+  - CI/CD
+  - GitOps
+  displayName: multinic-operator
+  iconSVGBase64: none
+  longDescription: multinic-operator is used to deploy instance of .....
+  maintainers:
+  - name: supervisor-services-labs.pdl@broadcom.com
+  providerName: VMware
+  shortDescription: multinic-operator is used to deploy ....
+---
+apiVersion: data.packaging.carvel.dev/v1alpha1
+kind: Package
+metadata:
+  creationTimestamp: null
+  name: multinic-operator.fling.vsphere.vmware.com.0.0.6
+spec:
+  refName: multinic-operator.fling.vsphere.vmware.com
+  releasedAt: "2025-02-21T18:55:12Z"
+  template:
+    spec:
+      deploy:
+      - kapp: {}
+      fetch:
+      - imgpkgBundle:
+          image: vsphere-labs-docker-prod-local.usw5.packages.broadcom.com/vsphere-labs/multinic-operator@sha256:f0c152378a30844c16aba77cab82a4d508030f4b893d977053ebf0b84e17c4ab
+      template:
+      - ytt:
+          paths:
+          - ./config
+      - kbld:
+          paths:
+          - '-'
+          - .imgpkg/images.yml
+  valuesSchema:
+    openAPIv3:
+      default: null
+      nullable: true
+  version: 0.0.6

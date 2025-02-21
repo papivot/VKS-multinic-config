@@ -93,8 +93,12 @@ spec:
     spec:
       containers:
       - name: multinic-controller 
-        image: whoami6443/multi-nic-controller:0.0.3
+        image: us-central1-docker.pkg.dev/navneet-410819/whoami6443-hub/whoami6443/multi-nic-controller:0.0.4
         env:
+        - name: GOVMOMI_HOME
+          value: "/tmp"
+        - name: GOVC_INSECURE
+          value: "1"
         - name: GOVC_URL
           valueFrom:
             configMapKeyRef:
@@ -115,6 +119,9 @@ spec:
           requests:
             cpu: 50m
             memory: 64Mi
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
         securityContext:
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
@@ -133,3 +140,6 @@ spec:
       serviceAccount: multinic-controller
       serviceAccountName: multinic-controller
       terminationGracePeriodSeconds: 30
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}

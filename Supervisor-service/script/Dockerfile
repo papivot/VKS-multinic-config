@@ -1,5 +1,4 @@
-# May require a proxy
-FROM ubuntu:22.04
+FROM us-central1-docker.pkg.dev/navneet-410819/whoami6443-hub/ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y && apt-get install -y curl jq && apt-get autoremove -y \
@@ -12,8 +11,9 @@ ADD https://github.com/krallin/tini/releases/download/v0.19.0/tini /sbin/tini
 RUN chmod +x /sbin/tini
 COPY server.sh /bin
 RUN chmod +x /bin/server.sh
+ENV GOVMOMI_HOME=/tmp
 
-RUN useradd multinic --uid 9999 -M -U --home-dir /user/multinic -s /bin/bash
+RUN useradd multinic --uid 9999 -m -U --home-dir /home/multinic -s /bin/bash
 USER multinic
 
 ENTRYPOINT ["/sbin/tini", "--"]
