@@ -1,0 +1,4 @@
+password: Vk13QHJlMTIz
+url: vcenter.vcf.lab
+username: testuser@vsphere.local
+image: whoami6443/multi-nic-controller:0.0.4
