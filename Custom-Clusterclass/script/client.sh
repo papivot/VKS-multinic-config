@@ -4,7 +4,8 @@ NETWORK_NAME="Workload1-VDS-PG"
 NETWORK_SWITCH="Pacific-VDS"
 MAX_RETRIES=12
 RETRY_INTERVAL=10
-#ORIG_NUM_NIC=""
+MANIFEST_FILE="/etc/kubernetes/manifests/kube-apiserver.yaml"
+PROCESS_NAME="kube-apiserver"
 NUM_NIC=""
 NEW_NIC=""
 CONFIGURE_NODE_IP_DHCP=0 # Set 1 to configure Node IP with DHCP. 
@@ -78,6 +79,20 @@ EOF
 }
 
 #### MAIN ####
+
+# Check if running on a Control Plane node
+if [[ -f "${MANIFEST_FILE}" ]]; then
+    echo "kube-apiserver Manifest file found. Waiting for kube-apiserver to start..." | tee -a "${LOG_FILE}"
+
+    # Wait until kube-apiserver is running
+    while ! ps aux | grep "${PROCESS_NAME}" | grep -v grep > /dev/null; do
+        echo "kube-apiserver is not running. Retrying in 30 seconds..." | tee -a "${LOG_FILE}"
+        sleep 30
+    done
+    echo "kube-apiserver is running. Proceeding with execution..." | tee -a "${LOG_FILE}"
+else
+    echo "Manifest file not found. Proceeding with execution..." | tee -a "${LOG_FILE}"
+fi
 
 # Request to add a new network interface
 vmtoolsd --cmd "info-set guestinfo.request_nic_add 1"

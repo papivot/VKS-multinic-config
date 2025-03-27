@@ -47,7 +47,7 @@ spec:
   - name: multi-nic-controlplane
     definitions:
     - selector:
-        apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+        apiVersion: controlplane.cluster.x-k8s.io/v1beta1
         kind: KubeadmControlPlaneTemplate
         matchResources:
           controlPlane: true
@@ -137,6 +137,19 @@ spec:
                   }
 
                   #### MAIN ####
+                  # Check if running on a Control Plane node
+                  if [[ -f "${MANIFEST_FILE}" ]]; then
+                      echo "kube-apiserver Manifest file found. Waiting for kube-apiserver to start..." | tee -a "${LOG_FILE}"
+
+                      # Wait until kube-apiserver is running
+                      while ! ps aux | grep "${PROCESS_NAME}" | grep -v grep > /dev/null; do
+                          echo "kube-apiserver is not running. Retrying in 30 seconds..." | tee -a "${LOG_FILE}"
+                          sleep 30
+                      done
+                      echo "kube-apiserver is running. Proceeding with execution..." | tee -a "${LOG_FILE}"
+                  else
+                      echo "Manifest file not found. Proceeding with execution..." | tee -a "${LOG_FILE}"
+                  fi
 
                   # Request to add a new network interface
                   vmtoolsd --cmd "info-set guestinfo.request_nic_add 1"
@@ -258,6 +271,19 @@ spec:
                   }
 
                   #### MAIN ####
+                  # Check if running on a Control Plane node
+                  if [[ -f "${MANIFEST_FILE}" ]]; then
+                      echo "kube-apiserver Manifest file found. Waiting for kube-apiserver to start..." | tee -a "${LOG_FILE}"
+
+                      # Wait until kube-apiserver is running
+                      while ! ps aux | grep "${PROCESS_NAME}" | grep -v grep > /dev/null; do
+                          echo "kube-apiserver is not running. Retrying in 30 seconds..." | tee -a "${LOG_FILE}"
+                          sleep 30
+                      done
+                      echo "kube-apiserver is running. Proceeding with execution..." | tee -a "${LOG_FILE}"
+                  else
+                      echo "Manifest file not found. Proceeding with execution..." | tee -a "${LOG_FILE}"
+                  fi
 
                   # Request to add a new network interface
                   vmtoolsd --cmd "info-set guestinfo.request_nic_add 1"
