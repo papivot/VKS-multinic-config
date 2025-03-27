@@ -2,29 +2,32 @@
 
 NETWORK_NAME="Workload1-VDS-PG"
 NETWORK_SWITCH="Pacific-VDS"
-MAX_RETRIES=20
-RETRY_INTERVAL=6
-ORIG_NUM_NIC=""
+MAX_RETRIES=12
+RETRY_INTERVAL=10
+#ORIG_NUM_NIC=""
 NUM_NIC=""
 NEW_NIC=""
+CONFIGURE_NODE_IP_DHCP=0 # Set 1 to configure Node IP with DHCP. 
+LOG_FILE="/tmp/nic-request.log"
 
 # Wait for the new NIC to appear
 check_new_nic() {
-    ORIG_NUM_NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -Ec '^ens|^eth')
+#    ORIG_NUM_NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -Ec '^ens|^eth')
     for ((i=1; i<=MAX_RETRIES; i++)); do
         NUM_NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -Ec '^ens|^eth')
-        if [ "${NUM_NIC}" != "${ORIG_NUM_NIC}" ]; then
+        echo "Found ${NUM_NIC}" | tee -a "${LOG_FILE}"  
+        if [ "${NUM_NIC}" == "2" ]; then
             NEW_NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -E '^ens|^eth' | tail -n 1)
             if [ -n "${NEW_NIC}" ]; then
-                echo "New network interface detected: $NEW_NIC"
+                echo "New network interface detected: ${NEW_NIC}" | tee -a "${LOG_FILE}"
                 break
             fi
         fi
-        echo "Waiting for NIC to appear... ($i/$MAX_RETRIES)"
+        echo "Waiting for NIC to appear... ($i/$MAX_RETRIES)" | tee -a "${LOG_FILE}"
         sleep $RETRY_INTERVAL
     done
     if [[ -z "$NEW_NIC" ]]; then
-        echo "NIC did not appear within the expected time."
+        echo "NIC did not appear within the expected time." | tee -a "${LOG_FILE}"
         exit 1
     fi
 }
@@ -32,10 +35,12 @@ check_new_nic() {
 # Function to configure the new NIC with DHCP.
 # Parameters: None (uses global variables for configuration)
 configure_new_nic_with_ip() {
-    echo "Configuring $NEW_NIC with DHCP..."
+    echo "Configuring ${NEW_NIC} with DHCP..." | tee -a "${LOG_FILE}"
+    OS_NAME=$(grep ^NAME /etc/os-release | cut -d'=' -f2 | tr -d '"')
 
     # Configure the new NIC
-    if [ -d /etc/systemd/network ]; then
+    if [[ "$OS_NAME" == *"Photon"* ]]; then
+        echo "Found Photon OS. Configuring $NEW_NIC with DHCP..." | tee -a "${LOG_FILE}"
     # Photon
 cat <<EOF | sudo tee -a /etc/systemd/network/20-dhcp-"$NEW_NIC".network
 [Address]
@@ -48,16 +53,9 @@ DHCP=yes
 EOF
         sudo chown systemd-network:systemd-network /etc/systemd/network/20-dhcp-"$NEW_NIC".network
         sudo systemctl restart systemd-networkd
-    elif [ -d /etc/sysconfig/network-scripts ]; then
-        # RHEL/CentOS/Fedora (just in case)
-cat <<EOF | sudo tee /etc/sysconfig/network-scripts/ifcfg-"$NEW_NIC"
-DEVICE=$NEW_NIC
-BOOTPROTO=dhcp
-ONBOOT=yes
-EOF
-        sudo systemctl restart network
-    elif [ -d /etc/netplan ]; then
+    elif [[ "$OS_NAME" == "Ubuntu" ]]; then
         # Ubuntu with netplan
+        echo "Found Ubuntu OS. Configuring $NEW_NIC with DHCP using netplan..." | tee -a "${LOG_FILE}"
         NETPLAN_FILE="/etc/netplan/02-netcfg.yaml"
 
 cat <<EOF | sudo tee -a $NETPLAN_FILE
@@ -72,12 +70,14 @@ EOF
         sudo chmod 600 $NETPLAN_FILE
         sudo netplan apply
     else
-        echo "Unsupported Linux distribution. Supported distributions are Photon, RHEL/CentOS/Fedora, and Ubuntu."
+        echo "Unsupported Linux distribution. Supported distributions are Photon and Ubuntu." | tee -a "${LOG_FILE}"
         exit 1
     fi
 
-    echo "NIC $NEW_NIC configured successfully."
+    echo "NIC $NEW_NIC configured successfully." | tee -a "${LOG_FILE}"
 }
+
+#### MAIN ####
 
 # Request to add a new network interface
 vmtoolsd --cmd "info-set guestinfo.request_nic_add 1"
@@ -86,11 +86,15 @@ vmtoolsd --cmd "info-set guestinfo.request_nic_pg ${NETWORK_NAME}"
 # Set the virtual switch for the new network interface
 vmtoolsd --cmd "info-set guestinfo.request_nic_switch ${NETWORK_SWITCH}"
 
+# Check if a new NIC has been added by the Supervisor Service.
 check_new_nic || exit 1
-echo "New NIC detected: $NEW_NIC"
+echo "New NIC detected: $NEW_NIC" | tee -a "${LOG_FILE}"
 
-configure_new_nic_with_ip || exit 1
-echo "NIC $NEW_NIC configured."
+# If the flag is set, configure the VM with an IP address. Else, let Antrea use the NIC for SecondaryNetwork. 
+if [ "$CONFIGURE_NODE_IP_DHCP" -eq 1 ]; then
+    configure_new_nic_with_ip || exit 1
+    echo "NIC $NEW_NIC configured." | tee -a "${LOG_FILE}"
+fi
 
 # Indicate that the NIC addition process is complete
 vmtoolsd --cmd "info-set guestinfo.request_nic_add 0"
