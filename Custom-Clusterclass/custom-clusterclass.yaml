@@ -63,7 +63,8 @@ spec:
                   NETWORK_SWITCH="Pacific-VDS"
                   MAX_RETRIES=12
                   RETRY_INTERVAL=10
-                  #ORIG_NUM_NIC=""
+                  MANIFEST_FILE="/etc/kubernetes/manifests/kube-apiserver.yaml"
+                  PROCESS_NAME="kube-apiserver"
                   NUM_NIC=""
                   NEW_NIC=""
                   CONFIGURE_NODE_IP_DHCP=0 # Set 1 to configure Node IP with DHCP. 
@@ -197,7 +198,8 @@ spec:
                   NETWORK_SWITCH="Pacific-VDS"
                   MAX_RETRIES=12
                   RETRY_INTERVAL=10
-                  #ORIG_NUM_NIC=""
+                  MANIFEST_FILE="/etc/kubernetes/manifests/kube-apiserver.yaml"
+                  PROCESS_NAME="kube-apiserver"
                   NUM_NIC=""
                   NEW_NIC=""
                   CONFIGURE_NODE_IP_DHCP=0 # Set 1 to configure Node IP with DHCP. 
